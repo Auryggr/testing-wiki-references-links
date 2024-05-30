@@ -1,0 +1,39 @@
+name: Sequential Link Checker
+
+on:
+  schedule:
+    - cron: '00 00 * * 2,5' 
+
+jobs:
+  link_checker_job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install Dependencies
+        run: |
+          npm ci
+          npx playwright install --with-deps
+          npm install cheerio axios
+
+      - name: Run Scripts
+        run: |
+          for script in ab_original.js ab_variation.js go-links_SD.js go-links_SF.js; do
+            node "$script"
+          done
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

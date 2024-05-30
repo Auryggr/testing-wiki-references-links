@@ -8,7 +8,7 @@ Hey There!
 
 > For this case, we want to know if the external references of some Wikipedia pages are still alive or find the broken ones, those with status 404
 
-> Also, we check if each ref link has the rel attribute "nofollow" as we should expect
+> Also, the script checks if each ref link has the rel attribute "nofollow" as we should expect
 
 
 *Is that not enough?*

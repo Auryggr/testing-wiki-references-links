@@ -39,7 +39,7 @@ async function run() {
                 const $ = cheerio.load(content);
 
                 const selectors = [
-                    '.citation',
+                    '.reference-text',
                 ];
 
                 await delay(600);
@@ -65,46 +65,61 @@ async function run() {
 
 async function checkLinks(url, $, selectors) {
     const wikiURL = "https://en.m.wikipedia.org";
+    let totalLinksReviewed = 0;
 
     for (const selector of selectors) {
         const elements = $(selector);
 
         elements.each(async (index, element) => {
-            const href = $(element).attr('href');
-            const relAttribute = $(element).attr('rel');
-            let fullUrl = wikiURL + href;
+            const anchors = $(element).find('a').first();
 
-            if (!relAttribute || !relAttribute.includes('nofollow')) {
-                console.error(`Missing rel attribute values on ${url} for ${selector}`);
-                await sendToSlack(`:red_circle: *Missing rel attribute* value on ${url} for the _PL:_ ${href}`);
-            }
+            anchors.each(async (index, anchor) => {
+                const href = $(anchor).attr('href');
+                const relAttribute = $(anchor).attr('rel');
+                totalLinksReviewed++;
 
-            try {
-                const response = await axios.get(fullUrl);
-
-                if (response.status === 200) {
-                    console.log(`Link ${fullUrl} is valid. Status Code: ${response.status}`);
-                } else {
-                    console.log(`Link ${fullUrl} is not valid. Status Code: ${response.status}`);
-                    if (response.status === 404) {
-                        console.error(`Attention! 404 error found on ${fullUrl}`);
-                        await sendToSlack(`Attention! *404 error* found on ${fullUrl}`);
-                    } else {
-                        console.error(`Error fetching ${fullUrl}: Status Code ${response.status}`);
-                        await sendToSlack(`:red_circle: Link ${fullUrl} is not valid. Status Code: *${response.status}*`);
-                    }
+                if (!href) {
+                    console.error(`Missing href attribute on ${url} for ${selector}`);
+                    await sendToSlack(`:red_circle: *Missing href attribute* on ${url} for the selector: ${selector}`);
+                    return;
                 }
-            } catch (error) {
-                console.error(`Error fetching ${fullUrl}:`, error.message);
-                await sendToSlack(`:red_circle: Error fetching ${fullUrl} *on* ${url}. *${error.message}* . Could you please double-check this, <@aurys> / <@ketna>?`);
-            }
-        });
 
-        await delay(600);
+                let fullUrl = href.startsWith('http') ? href : wikiURL + href;
+
+                if (!relAttribute || !relAttribute.includes('nofollow')) {
+                    console.error(`Missing rel attribute values on ${url} for ${selector}`);
+                    await sendToSlack(`:red_circle: *Missing rel attribute* value on ${url} for the _PL:_ ${href}`);
+                }
+
+                try {
+                    const response = await axios.get(fullUrl);
+
+                    if (response.status === 200) {
+                        console.log(`Link ${fullUrl} is valid. Status Code: ${response.status}`);
+                    } else {
+                        console.log(`Link ${fullUrl} is not valid. Status Code: ${response.status}`);
+                        if (response.status === 404) {
+                            console.error(`Attention! 404 error found on ${fullUrl}`);
+                            await sendToSlack(`Attention! *404 error* found on ${fullUrl}`);
+                        } else {
+                            console.error(`Error fetching ${fullUrl}: Status Code ${response.status}`);
+                            await sendToSlack(`:red_circle: Link ${fullUrl} is not valid. Status Code: *${response.status}*`);
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Error fetching ${fullUrl}:`, error.message);
+                    await sendToSlack(`:red_circle: Error fetching ${fullUrl} *on* ${url}. *${error.message}* . Could you please double-check this, <@aurys>`);
+                }
+
+                await delay(600);
+            });
+        });
     }
 
     console.log(`Link checking completed for ${url}`);
     await sendToSlack(`:large_green_circle: Link checking completed for ${url}`);
+    console.log(`Total links reviewed: ${totalLinksReviewed}`);
+    await sendToSlack(`Total links reviewed: ${totalLinksReviewed}`);
 }
 
 async function sendToSlack(message) {

@@ -2,7 +2,10 @@ name: Sequential Link Checker
 
 on:
   schedule:
-    - cron: '00 00 * * 2,5' 
+    - cron: '00 00 * * 2,5'
+  push:
+    branches:
+      - main 
 
 jobs:
   link_checker_job:
@@ -32,7 +35,7 @@ jobs:
 
       - name: Run Scripts
         run: |
-          for script in ab_original.js ab_variation.js go-links_SD.js go-links_SF.js; do
+          for script in links-status.js; do
             node "$script"
           done
         env:
